@@ -2,5 +2,6 @@
     <string name="app_name">CleanGallery</string>
     <string name="gallery_image">Gallery Image</string>
     <string name="delete_selected_photos">Delete selected photos</string>
-    <string name="folder_thumbnail">Delete selected photos</string>
+    <string name="folder_thumbnail">Folder Thumbnail</string>
+    <string name="play_video">Play Video</string>
 </resources>

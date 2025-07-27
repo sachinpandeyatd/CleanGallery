@@ -117,6 +117,8 @@ class FolderListActivity : AppCompatActivity() {
                 val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME)
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
 
+                val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+
                 while (cursor.moveToNext()) {
                     val bucketName = cursor.getString(bucketNameColumn)
 
@@ -126,6 +128,7 @@ class FolderListActivity : AppCompatActivity() {
                     }
 
                     val id = cursor.getLong(idColumn)
+                    val mediaType = cursor.getInt(mediaTypeColumn)
                     val thumbnailUri = ContentUris.withAppendedId(collection, id)
 
                     val folder = folderMap[bucketName]

@@ -151,7 +151,10 @@ class MainActivity : AppCompatActivity(), CardStackListener {
                 MediaStore.Files.getContentUri("external")
             }
 
-            val projection = arrayOf(MediaStore.Files.FileColumns._ID)
+            val projection = arrayOf(
+                MediaStore.Files.FileColumns._ID,
+                MediaStore.Files.FileColumns.MEDIA_TYPE
+            )
 
             val selection = "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?)" +
                     " AND ${MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME} = ?"
@@ -172,10 +175,17 @@ class MainActivity : AppCompatActivity(), CardStackListener {
                 sortOrder
             )?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                val mediaTypeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MEDIA_TYPE)
+
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idColumn)
                     val contentUri: Uri = ContentUris.withAppendedId(collection, id)
-                    mediaList.add(MediaItem(id, contentUri))
+
+                    val type = when (cursor.getInt(mediaTypeColumn)) {
+                        MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO -> MediaType.VIDEO
+                        else -> MediaType.IMAGE
+                    }
+                    mediaList.add(MediaItem(id, contentUri, type))
                 }
             }
 
@@ -216,7 +226,14 @@ class MainActivity : AppCompatActivity(), CardStackListener {
             return
         }
 
-        val urisToDelete = items.map { it.uri }
+        val urisToDelete = items.map { item ->
+            when (item.type) {
+                MediaType.VIDEO ->
+                    ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, item.id)
+                MediaType.IMAGE ->
+                    ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, item.id)
+            }
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             try {
