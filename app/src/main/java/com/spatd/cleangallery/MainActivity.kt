@@ -36,27 +36,27 @@ class MainActivity : AppCompatActivity(), CardStackListener {
     private val itemsToDelete = mutableListOf<MediaItem>()
     private lateinit var fabDelete: FloatingActionButton
 
-    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        permissions ->
-            val isReadImageGranted = permissions[Manifest.permission.READ_MEDIA_IMAGES] ?: false
-            val isReadVideoGranted = permissions[Manifest.permission.READ_MEDIA_VIDEO] ?: false
-            val isUserSelectedGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                permissions[Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED] ?: false
-            } else {
-                false
-            }
-            if (isReadImageGranted && isReadVideoGranted) {
-                Log.d("Permission", "Full media access granted")
-                fetchMedia()
-            }else if(isUserSelectedGranted){
-                Log.d("Permission", "Partial media access granted")
-                Toast.makeText(this, "Partial media access granted. You can select more photos later.", Toast.LENGTH_LONG).show()
-                fetchMedia()
-            }else{
-                Toast.makeText(this, "Storage permission is required to use this app", Toast.LENGTH_LONG).show()
-                finish()
-            }
-    }
+//    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+//        permissions ->
+//            val isReadImageGranted = permissions[Manifest.permission.READ_MEDIA_IMAGES] ?: false
+//            val isReadVideoGranted = permissions[Manifest.permission.READ_MEDIA_VIDEO] ?: false
+//            val isUserSelectedGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+//                permissions[Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED] ?: false
+//            } else {
+//                false
+//            }
+//            if (isReadImageGranted && isReadVideoGranted) {
+//                Log.d("Permission", "Full media access granted")
+//                fetchMedia()
+//            }else if(isUserSelectedGranted){
+//                Log.d("Permission", "Partial media access granted")
+//                Toast.makeText(this, "Partial media access granted. You can select more photos later.", Toast.LENGTH_LONG).show()
+//                fetchMedia()
+//            }else{
+//                Toast.makeText(this, "Storage permission is required to use this app", Toast.LENGTH_LONG).show()
+//                finish()
+//            }
+//    }
 
     private val deleteRequestLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()){
         result ->
@@ -74,43 +74,51 @@ class MainActivity : AppCompatActivity(), CardStackListener {
         fabDelete = findViewById(R.id.fab_delete)
 
         setupCardStackView()
-        checkPermissionsAndFetchMedia()
+        val folderName = intent.getStringExtra("FOLDER_NAME")
+
+        if (folderName != null) {
+            fetchMedia(folderName)
+            title = folderName
+        } else {
+            Toast.makeText(this, "No folder specified.", Toast.LENGTH_LONG).show()
+            finish()
+        }
 
         fabDelete.setOnClickListener {
             deletePendingItems()
         }
     }
 
-    private fun checkPermissionsAndFetchMedia() {
-        val permissionsToRequest = when{
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->{
-                arrayOf(
-                    Manifest.permission.READ_MEDIA_IMAGES,
-                    Manifest.permission.READ_MEDIA_VIDEO,
-                    Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
-                )
-            }
-
-            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
-                arrayOf(
-                    Manifest.permission.READ_MEDIA_IMAGES,
-                    Manifest.permission.READ_MEDIA_VIDEO
-                )
-            }else ->{
-                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-            }
-        }
-
-        val allPermissionsGranted = permissionsToRequest.all {
-            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-        }
-
-        if(allPermissionsGranted){
-            fetchMedia()
-        }else{
-            requestPermissionLauncher.launch(permissionsToRequest)
-        }
-    }
+//    private fun checkPermissionsAndFetchMedia() {
+//        val permissionsToRequest = when{
+//            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->{
+//                arrayOf(
+//                    Manifest.permission.READ_MEDIA_IMAGES,
+//                    Manifest.permission.READ_MEDIA_VIDEO,
+//                    Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
+//                )
+//            }
+//
+//            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+//                arrayOf(
+//                    Manifest.permission.READ_MEDIA_IMAGES,
+//                    Manifest.permission.READ_MEDIA_VIDEO
+//                )
+//            }else ->{
+//                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+//            }
+//        }
+//
+//        val allPermissionsGranted = permissionsToRequest.all {
+//            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+//        }
+//
+//        if(allPermissionsGranted){
+//            fetchMedia()
+//        }else{
+//            requestPermissionLauncher.launch(permissionsToRequest)
+//        }
+//    }
 
     private fun setupCardStackView() {
         manager = CardStackLayoutManager(this, this).apply {
@@ -133,36 +141,49 @@ class MainActivity : AppCompatActivity(), CardStackListener {
         cardStackView.itemAnimator = DefaultItemAnimator()
     }
 
-    private fun fetchMedia() {
+    private fun fetchMedia(folderName: String) {
         lifecycleScope.launch(Dispatchers.IO) {
             val mediaList = mutableListOf<MediaItem>()
-            val projection = arrayOf(MediaStore.Images.Media._ID)
-            val sortOrder = "${MediaStore.Images.Media.DATE_ADDED} DESC"
+
+            val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            } else {
+                MediaStore.Files.getContentUri("external")
+            }
+
+            val projection = arrayOf(MediaStore.Files.FileColumns._ID)
+
+            val selection = "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?)" +
+                    " AND ${MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME} = ?"
+
+            val selectionArgs = arrayOf(
+                MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+                MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+                folderName
+            )
+
+            val sortOrder = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
 
             contentResolver.query(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                projection,null, null, sortOrder
-            )?.use {cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-
-                while(cursor.moveToNext()){
+                collection,
+                projection,
+                selection,
+                selectionArgs,
+                sortOrder
+            )?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+                while (cursor.moveToNext()) {
                     val id = cursor.getLong(idColumn)
-                    val contentUri: Uri = ContentUris.withAppendedId(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id
-                    )
+                    val contentUri: Uri = ContentUris.withAppendedId(collection, id)
                     mediaList.add(MediaItem(id, contentUri))
                 }
             }
 
-            withContext(Dispatchers.Main){
-                if(mediaList.isEmpty()){
-                    Toast.makeText(this@MainActivity, "No photos found or none selected.", Toast.LENGTH_LONG).show()
-                }
+            withContext(Dispatchers.Main) {
                 adapter.setItems(mediaList)
             }
         }
     }
-
 
     override fun onCardSwiped(direction: Direction?) {
         val position = manager.topPosition - 1;
