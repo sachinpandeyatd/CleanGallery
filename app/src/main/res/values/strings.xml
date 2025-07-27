@@ -4,4 +4,5 @@
     <string name="delete_selected_photos">Delete selected photos</string>
     <string name="folder_thumbnail">Folder Thumbnail</string>
     <string name="play_video">Play Video</string>
+    <string name="go_to_folder">Go To Folder</string>
 </resources>

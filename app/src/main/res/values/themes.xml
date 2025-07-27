@@ -5,5 +5,5 @@
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
     </style>
 
-    <style name="Theme.CleanGallery" parent="Base.Theme.CleanGallery" />
+    <style name="Theme.CleanGallery" parent="Theme.Material3.DayNight.NoActionBar" />
 </resources>

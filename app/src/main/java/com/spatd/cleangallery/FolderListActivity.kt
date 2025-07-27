@@ -53,6 +53,8 @@ class FolderListActivity : AppCompatActivity() {
         folderRecyclerView = findViewById(R.id.folder_recycler_view)
         folderRecyclerView.layoutManager = LinearLayoutManager(this)
 
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
         checkPermissionsAndFetchFolders()
     }
 
