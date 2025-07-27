@@ -35,6 +35,7 @@ class MainActivity : AppCompatActivity(), CardStackListener {
     private val adapter = CardStackAdapter()
     private val itemsToDelete = mutableListOf<MediaItem>()
     private lateinit var fabDelete: FloatingActionButton
+    private var currentToast: Toast? = null
 
 //    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
 //        permissions ->
@@ -199,24 +200,33 @@ class MainActivity : AppCompatActivity(), CardStackListener {
         val position = manager.topPosition - 1;
         val swipedItem = adapter.getItems().getOrNull(position) ?: return
 
+        currentToast?.cancel()
+
         when(direction){
             Direction.Left -> {
                 Log.d("CardStackView", "Added to delete list: ${swipedItem.uri}")
                 itemsToDelete.add(swipedItem)
-                Toast.makeText(this, "Added to delete list", Toast.LENGTH_SHORT).show()
+                currentToast = Toast.makeText(this, "Added to delete list", Toast.LENGTH_SHORT)
             }
 
             Direction.Right -> {
                 Log.d("CardStackView", "Swiped Right. Keeping: ${swipedItem.uri}")
-                Toast.makeText(this, "Kept", Toast.LENGTH_SHORT).show()
+                currentToast = Toast.makeText(this, "Kept", Toast.LENGTH_SHORT)
             }
 
             Direction.Top -> {
                 Log.d("CardStackView", "Swiped Up. Favouriting: ${swipedItem.uri}")
-                Toast.makeText(this, "Favourited", Toast.LENGTH_SHORT).show()
+                currentToast = Toast.makeText(this, "Favorited!", Toast.LENGTH_SHORT)
             }
 
-            else -> {}
+            else -> {
+                return
+            }
+        }
+        currentToast?.show()
+
+        if (manager.topPosition == adapter.itemCount) {
+            Toast.makeText(this, "All done! 🎉", Toast.LENGTH_LONG).show()
         }
     }
 
