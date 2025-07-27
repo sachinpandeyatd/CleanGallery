@@ -59,9 +59,29 @@ class FolderListActivity : AppCompatActivity() {
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
-        val mainContent = findViewById<LinearLayout>(R.id.main_content)
+
+
+        val mainContent = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(R.id.main_content)
         folderRecyclerView = findViewById(R.id.folder_recycler_view)
         folderRecyclerView.layoutManager = LinearLayoutManager(this)
+
+
+        val bottomNavigationView = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+        bottomNavigationView.selectedItemId = R.id.nav_folders
+
+        bottomNavigationView.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_photos -> {
+                    Toast.makeText(this, "Photos clicked", Toast.LENGTH_SHORT).show()
+                    true
+                }
+                R.id.nav_folders -> {
+                    true
+                }
+                else -> false
+            }
+        }
+
 
         ViewCompat.setOnApplyWindowInsetsListener(mainContent) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
