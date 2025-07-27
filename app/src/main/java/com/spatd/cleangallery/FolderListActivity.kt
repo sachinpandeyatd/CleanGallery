@@ -11,6 +11,7 @@ import android.provider.MediaStore
 import android.util.Log
 import android.widget.LinearLayout
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -21,6 +22,8 @@ import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -52,21 +55,20 @@ class FolderListActivity : AppCompatActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_folder_list)
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
-
-
         val mainContent = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(R.id.main_content)
+        val topAppBarLayout = findViewById<AppBarLayout>(R.id.top_app_bar_layout)
+        val bottomNavigationView = findViewById<BottomNavigationView>(R.id.bottom_navigation)
         folderRecyclerView = findViewById(R.id.folder_recycler_view)
         folderRecyclerView.layoutManager = LinearLayoutManager(this)
 
-
-        val bottomNavigationView = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
+//        val bottomNavigationView = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
         bottomNavigationView.selectedItemId = R.id.nav_folders
 
         bottomNavigationView.setOnItemSelectedListener { item ->
@@ -82,9 +84,11 @@ class FolderListActivity : AppCompatActivity() {
             }
         }
 
-
         ViewCompat.setOnApplyWindowInsetsListener(mainContent) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+            topAppBarLayout.updatePadding(top = systemBars.top)
+            bottomNavigationView.updatePadding(bottom = systemBars.bottom)
 
             view.updatePadding(top = systemBars.top)
 
