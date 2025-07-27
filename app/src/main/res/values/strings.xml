@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">CleanGallery</string>
+    <string name="gallery_image">Gallery Image</string>
+    <string name="delete_selected_photos">Delete selected photos</string>
+</resources>
