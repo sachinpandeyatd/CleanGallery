@@ -115,10 +115,13 @@ class MainActivity : AppCompatActivity(), CardStackListener {
         }
 
         fabDelete.setOnClickListener {
-            if (itemsToDelete.isNotEmpty()) {
-                showDeleteOptionsDialog()
-            } else {
-                Toast.makeText(this, "No items selected for deletion", Toast.LENGTH_SHORT).show()
+            lifecycleScope.launch {
+                val trashItems = db.getItemsByStatus("TRASH")
+                if (trashItems.isNotEmpty()) {
+                    showDeleteOptionsDialog(trashItems)
+                } else {
+                    Toast.makeText(this@MainActivity, "Trash is empty", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -249,9 +252,9 @@ class MainActivity : AppCompatActivity(), CardStackListener {
 
         when(direction){
             Direction.Left -> {
-                Log.d("CardStackView", "Added to delete list: ${swipedItem.uri}")
-                itemsToDelete.add(swipedItem)
-                currentToast = Toast.makeText(this, "Added to delete list", Toast.LENGTH_SHORT)
+                val itemToStage = StagedItem(swipedItem.uri.toString(), "TRASH")
+                lifecycleScope.launch { db.insert(itemToStage) }
+                currentToast = Toast.makeText(this, "Moved to Trash", Toast.LENGTH_SHORT)
             }
 
             Direction.Right -> {
@@ -335,19 +338,26 @@ class MainActivity : AppCompatActivity(), CardStackListener {
         }
     }
 
-    private fun showDeleteOptionsDialog() {
+    private fun showDeleteOptionsDialog(itemsFromDb: List<StagedItem>) {
         val options = arrayOf("Review Media", "Delete All", "Cancel")
+
+        val trashMediaItems = itemsFromDb.mapNotNull {
+            try {
+                MediaItem(id = -1, uri = Uri.parse(it.uri), type = MediaType.IMAGE)
+            } catch (e: Exception) { null }
+        }
+
         MaterialAlertDialogBuilder(this)
-            .setTitle("Delete ${itemsToDelete.size} items?")
+            .setTitle("Manage ${itemsFromDb.size} items in Trash?")
             .setItems(options) { dialog, which ->
                 when (which) {
                     0 -> { // Review Media
                         val intent = Intent(this, ReviewActivity::class.java)
-                        intent.putParcelableArrayListExtra("ITEMS_TO_REVIEW", ArrayList(itemsToDelete))
+                        intent.putParcelableArrayListExtra("ITEMS_TO_REVIEW", ArrayList(trashMediaItems))
                         reviewLauncher.launch(intent)
                     }
                     1 -> { // Delete All
-                        deleteMediaItems(itemsToDelete)
+                        deleteMediaItems(trashMediaItems)
                     }
                     2 -> { // Cancel
                         dialog.dismiss()
@@ -355,6 +365,22 @@ class MainActivity : AppCompatActivity(), CardStackListener {
                 }
             }
             .show()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (isFinishing && itemsToDelete.isNotEmpty()) {
+            lifecycleScope.launch {
+                val itemsToStage = itemsToDelete.map {
+                    StagedItem(it.uri.toString(), "TRASH")
+                }
+                for (item in itemsToStage) {
+                    db.insert(item)
+                }
+                itemsToDelete.clear()
+                Log.d("MainActivity", "Session trash moved to persistent database.")
+            }
+        }
     }
 
     override fun onCardDragging(direction: Direction?, ratio: Float) {}

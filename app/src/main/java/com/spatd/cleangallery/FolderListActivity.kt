@@ -2,6 +2,7 @@ package com.spatd.cleangallery
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.ContentUris
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -34,6 +35,14 @@ class FolderListActivity : AppCompatActivity() {
 
     private lateinit var folderRecyclerView: RecyclerView
     private lateinit var bottomNavigationView: BottomNavigationView
+    private val db by lazy { AppDatabase.getDatabase(this).stagedItemDao() }
+
+    private val reviewTrashLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            Toast.makeText(this, "Trash updated, refreshing list...", Toast.LENGTH_SHORT).show()
+            fetchMediaFolders()
+        }
+    }
 
     @SuppressLint("NewApi")
     private val requestPermissionLauncher =
@@ -105,6 +114,34 @@ class FolderListActivity : AppCompatActivity() {
         favoritesButton.setOnClickListener {
             val intent = Intent(this, FavoritesActivity::class.java)
             startActivity(intent)
+        }
+
+        val trashButton = findViewById<Button>(R.id.trash_button)
+
+        trashButton.setOnClickListener {
+            lifecycleScope.launch {
+                val trashStagedItems = db.getItemsByStatus("TRASH")
+                if (trashStagedItems.isNotEmpty()) {
+                    val trashMediaItems = trashStagedItems.mapNotNull { stagedItem ->
+                        try {
+                            MediaItem(
+                                id = -1,
+                                uri = Uri.parse(stagedItem.uri),
+                                type = MediaType.IMAGE
+                            )
+                        } catch (e: Exception) {
+                            Log.e("TrashButton", "Failed to parse URI: ${stagedItem.uri}", e)
+                            null
+                        }
+                    }
+
+                    val intent = Intent(this@FolderListActivity, ReviewActivity::class.java)
+                    intent.putParcelableArrayListExtra("ITEMS_TO_REVIEW", ArrayList(trashMediaItems))
+                    reviewTrashLauncher.launch(intent)
+                } else {
+                    Toast.makeText(this@FolderListActivity, "Trash is empty", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         checkPermissionsAndFetchFolders()
