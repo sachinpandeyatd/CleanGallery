@@ -105,8 +105,8 @@ class MainActivity : AppCompatActivity(), CardStackListener {
             fetchMedia(folderName)
             title = folderName
         } else {
-            Toast.makeText(this, "No folder specified.", Toast.LENGTH_LONG).show()
-            finish()
+            fetchMedia(null)
+            title = "All Photos"
         }
 
         fabDelete.setOnClickListener {
@@ -170,7 +170,7 @@ class MainActivity : AppCompatActivity(), CardStackListener {
         cardStackView.itemAnimator = DefaultItemAnimator()
     }
 
-    private fun fetchMedia(folderName: String) {
+    private fun fetchMedia(folderName: String?) {
         lifecycleScope.launch(Dispatchers.IO) {
             val mediaList = mutableListOf<MediaItem>()
 
@@ -185,14 +185,27 @@ class MainActivity : AppCompatActivity(), CardStackListener {
                 MediaStore.Files.FileColumns.MEDIA_TYPE
             )
 
-            val selection = "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?)" +
-                    " AND ${MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME} = ?"
+            val selection : String?
+            val selectionArgs : Array<String>?
 
-            val selectionArgs = arrayOf(
-                MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
-                MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
-                folderName
-            )
+            if(folderName != null) {
+                selection =
+                    "(${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?)" +
+                            " AND ${MediaStore.Files.FileColumns.BUCKET_DISPLAY_NAME} = ?"
+
+                selectionArgs = arrayOf(
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+                    folderName
+                )
+            }else{
+                selection = "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR " +
+                        "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?"
+                selectionArgs = arrayOf(
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString()
+                )
+            }
 
             val sortOrder = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
 

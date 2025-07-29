@@ -3,6 +3,7 @@ package com.spatd.cleangallery
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ContentUris
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -75,8 +76,9 @@ class FolderListActivity : AppCompatActivity() {
         bottomNavigationView.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_photos -> {
-                    Toast.makeText(this, "Photos clicked", Toast.LENGTH_SHORT).show()
-                    true
+                    val intent = Intent(this, MainActivity::class.java)
+                    startActivity(intent)
+                    false
                 }
                 R.id.nav_folders -> {
                     true
