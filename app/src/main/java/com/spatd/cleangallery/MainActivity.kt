@@ -48,38 +48,6 @@ class MainActivity : AppCompatActivity(), CardStackListener {
     private var currentToast: Toast? = null
     private val db by lazy { AppDatabase.getDatabase(this).stagedItemDao() }
 
-//    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-//        permissions ->
-//            val isReadImageGranted = permissions[Manifest.permission.READ_MEDIA_IMAGES] ?: false
-//            val isReadVideoGranted = permissions[Manifest.permission.READ_MEDIA_VIDEO] ?: false
-//            val isUserSelectedGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-//                permissions[Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED] ?: false
-//            } else {
-//                false
-//            }
-//            if (isReadImageGranted && isReadVideoGranted) {
-//                Log.d("Permission", "Full media access granted")
-//                fetchMedia()
-//            }else if(isUserSelectedGranted){
-//                Log.d("Permission", "Partial media access granted")
-//                Toast.makeText(this, "Partial media access granted. You can select more photos later.", Toast.LENGTH_LONG).show()
-//                fetchMedia()
-//            }else{
-//                Toast.makeText(this, "Storage permission is required to use this app", Toast.LENGTH_LONG).show()
-//                finish()
-//            }
-//    }
-
-//    private val deleteRequestLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()){
-//        result ->
-//            if(result.resultCode == RESULT_OK){
-//                Toast.makeText(this, "Photo deleted successfully", Toast.LENGTH_SHORT).show()
-//                itemsToDelete.clear()
-//            }else{
-//                Toast.makeText(this, "Error deleting photo", Toast.LENGTH_SHORT).show()
-//            }
-//    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -140,37 +108,6 @@ class MainActivity : AppCompatActivity(), CardStackListener {
             }
         }
     }
-
-//    private fun checkPermissionsAndFetchMedia() {
-//        val permissionsToRequest = when{
-//            Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE ->{
-//                arrayOf(
-//                    Manifest.permission.READ_MEDIA_IMAGES,
-//                    Manifest.permission.READ_MEDIA_VIDEO,
-//                    Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
-//                )
-//            }
-//
-//            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
-//                arrayOf(
-//                    Manifest.permission.READ_MEDIA_IMAGES,
-//                    Manifest.permission.READ_MEDIA_VIDEO
-//                )
-//            }else ->{
-//                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-//            }
-//        }
-//
-//        val allPermissionsGranted = permissionsToRequest.all {
-//            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
-//        }
-//
-//        if(allPermissionsGranted){
-//            fetchMedia()
-//        }else{
-//            requestPermissionLauncher.launch(permissionsToRequest)
-//        }
-//    }
 
     private fun setupCardStackView() {
         manager = CardStackLayoutManager(this, this).apply {
@@ -302,98 +239,6 @@ class MainActivity : AppCompatActivity(), CardStackListener {
             Toast.makeText(this, "All done! 🎉", Toast.LENGTH_LONG).show()
         }
     }
-
-//    private fun deleteMediaItems(items: List<MediaItem>) {
-//        if (items.isEmpty()) {
-//            Toast.makeText(this, "No items to delete.", Toast.LENGTH_SHORT).show()
-//            return
-//        }
-//
-//        val urisToDelete = items.map { item ->
-//            when (item.type) {
-//                MediaType.VIDEO ->
-//                    ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, item.id)
-//                MediaType.IMAGE ->
-//                    ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, item.id)
-//            }
-//        }
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-//            try {
-//                val pendingIntent = MediaStore.createDeleteRequest(contentResolver, urisToDelete)
-//                val intentSenderRequest = IntentSenderRequest.Builder(pendingIntent.intentSender).build()
-//                deleteRequestLauncher.launch(intentSenderRequest)
-//            } catch (e: Exception) {
-//                Log.e("DeleteError", "Error creating delete request", e)
-//                Toast.makeText(this, "Error requesting deletion: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-//            }
-//        } else {
-//            // Fallback for older devices
-//            var deleteCount = 0
-//            for (uri in urisToDelete) {
-//                try {
-//                    contentResolver.delete(uri, null, null)
-//                    deleteCount++
-//                } catch (ex: Exception) {
-//                    Log.e("DeleteFallback", "Failed to delete $uri", ex)
-//                }
-//            }
-//            Toast.makeText(this, "$deleteCount media files deleted", Toast.LENGTH_SHORT).show()
-//            itemsToDelete.clear()
-//        }
-//    }
-
-//    private fun deletePendingItems() {
-//        deleteMediaItems(itemsToDelete)
-//    }
-
-//    private val reviewLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-//        if (result.resultCode == Activity.RESULT_OK) {
-//            val finalList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-//                result.data?.getParcelableArrayListExtra("FINAL_DELETE_LIST", MediaItem::class.java)
-//            } else {
-//                result.data?.getParcelableArrayListExtra("FINAL_DELETE_LIST")
-//            }
-//
-//            if (finalList != null) {
-//                // Call the delete function with the list returned from ReviewActivity
-//                deleteMediaItems(finalList)
-//            }
-//        }
-//    }
-
-//    private fun showDeleteOptionsDialog(itemsFromDb: List<StagedItem>) {
-//        val options = arrayOf("Review Media", "Delete All", "Cancel")
-//
-//        val trashMediaItems = itemsFromDb.mapNotNull { stagedItem ->
-//            try {
-//                MediaItem(
-//                    id = stagedItem.mediaId,
-//                    uri = Uri.parse(stagedItem.uri),
-//                    type = MediaType.valueOf(stagedItem.mediaType)
-//                )
-//            } catch (e: Exception) { null }
-//        }
-//
-//        MaterialAlertDialogBuilder(this)
-//            .setTitle("Manage ${itemsFromDb.size} items in Trash?")
-//            .setItems(options) { dialog, which ->
-//                when (which) {
-//                    0 -> { // Review Media
-//                        val intent = Intent(this, ReviewActivity::class.java)
-//                        intent.putParcelableArrayListExtra("ITEMS_TO_REVIEW", ArrayList(trashMediaItems))
-//                        reviewLauncher.launch(intent)
-//                    }
-//                    1 -> { // Delete All
-//                        deleteMediaItems(trashMediaItems)
-//                    }
-//                    2 -> { // Cancel
-//                        dialog.dismiss()
-//                    }
-//                }
-//            }
-//            .show()
-//    }
 
     override fun onPause() {
         super.onPause()
