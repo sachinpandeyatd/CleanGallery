@@ -106,8 +106,16 @@ class FolderListActivity : AppCompatActivity() {
         val favoritesButton = findViewById<Button>(R.id.favorites_button)
 
         favoritesButton.setOnClickListener {
-            val intent = Intent(this, FavoritesActivity::class.java)
-            startActivity(intent)
+            lifecycleScope.launch {
+                val favoriteItems = db.getItemsByStatus("FAVORITE")
+
+                if (favoriteItems.isNotEmpty()) {
+                    val intent = Intent(this@FolderListActivity, FavoritesActivity::class.java)
+                    startActivity(intent)
+                } else {
+                    Toast.makeText(this@FolderListActivity, "Favorites is empty", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         val trashButton = findViewById<Button>(R.id.trash_button)
