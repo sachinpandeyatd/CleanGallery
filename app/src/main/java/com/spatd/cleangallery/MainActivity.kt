@@ -70,15 +70,15 @@ class MainActivity : AppCompatActivity(), CardStackListener {
 //            }
 //    }
 
-    private val deleteRequestLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()){
-        result ->
-            if(result.resultCode == RESULT_OK){
-                Toast.makeText(this, "Photo deleted successfully", Toast.LENGTH_SHORT).show()
-                itemsToDelete.clear()
-            }else{
-                Toast.makeText(this, "Error deleting photo", Toast.LENGTH_SHORT).show()
-            }
-    }
+//    private val deleteRequestLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()){
+//        result ->
+//            if(result.resultCode == RESULT_OK){
+//                Toast.makeText(this, "Photo deleted successfully", Toast.LENGTH_SHORT).show()
+//                itemsToDelete.clear()
+//            }else{
+//                Toast.makeText(this, "Error deleting photo", Toast.LENGTH_SHORT).show()
+//            }
+//    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -118,7 +118,22 @@ class MainActivity : AppCompatActivity(), CardStackListener {
             lifecycleScope.launch {
                 val trashItems = db.getItemsByStatus("TRASH")
                 if (trashItems.isNotEmpty()) {
-                    showDeleteOptionsDialog(trashItems)
+                    // Convert StagedItems to MediaItems
+                    val trashMediaItems = trashItems.mapNotNull { stagedItem ->
+                        try {
+                            MediaItem(
+                                id = stagedItem.mediaId,
+                                uri = Uri.parse(stagedItem.uri),
+                                type = MediaType.valueOf(stagedItem.mediaType)
+                            )
+                        } catch (e: Exception) { null }
+                    }
+
+                    // Launch ReviewActivity to manage the trash
+                    val intent = Intent(this@MainActivity, ReviewActivity::class.java)
+                    intent.putParcelableArrayListExtra("ITEMS_TO_REVIEW", ArrayList(trashMediaItems))
+                    startActivity(intent) // We don't need a result back here
+
                 } else {
                     Toast.makeText(this@MainActivity, "Trash is empty", Toast.LENGTH_SHORT).show()
                 }
@@ -247,12 +262,16 @@ class MainActivity : AppCompatActivity(), CardStackListener {
     override fun onCardSwiped(direction: Direction?) {
         val position = manager.topPosition - 1;
         val swipedItem = adapter.getItems().getOrNull(position) ?: return
-
         currentToast?.cancel()
 
         when(direction){
             Direction.Left -> {
-                val itemToStage = StagedItem(swipedItem.uri.toString(), "TRASH")
+                val itemToStage = StagedItem(
+                    uri = swipedItem.uri.toString(),
+                    mediaId = swipedItem.id,
+                    mediaType = swipedItem.type.name,
+                    status = "TRASH"
+                )
                 lifecycleScope.launch { db.insert(itemToStage) }
                 currentToast = Toast.makeText(this, "Moved to Trash", Toast.LENGTH_SHORT)
             }
@@ -263,7 +282,12 @@ class MainActivity : AppCompatActivity(), CardStackListener {
             }
 
             Direction.Top -> {
-                val itemToStage = StagedItem(swipedItem.uri.toString(), "FAVORITE")
+                val itemToStage = StagedItem(
+                    uri = swipedItem.uri.toString(),
+                    mediaId = swipedItem.id,
+                    mediaType = swipedItem.type.name,
+                    status = "FAVORITE"
+                )
                 lifecycleScope.launch { db.insert(itemToStage) }
                 currentToast = Toast.makeText(this, "Added to Favorites", Toast.LENGTH_SHORT)
             }
@@ -279,100 +303,109 @@ class MainActivity : AppCompatActivity(), CardStackListener {
         }
     }
 
-    private fun deleteMediaItems(items: List<MediaItem>) {
-        if (items.isEmpty()) {
-            Toast.makeText(this, "No items to delete.", Toast.LENGTH_SHORT).show()
-            return
-        }
+//    private fun deleteMediaItems(items: List<MediaItem>) {
+//        if (items.isEmpty()) {
+//            Toast.makeText(this, "No items to delete.", Toast.LENGTH_SHORT).show()
+//            return
+//        }
+//
+//        val urisToDelete = items.map { item ->
+//            when (item.type) {
+//                MediaType.VIDEO ->
+//                    ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, item.id)
+//                MediaType.IMAGE ->
+//                    ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, item.id)
+//            }
+//        }
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+//            try {
+//                val pendingIntent = MediaStore.createDeleteRequest(contentResolver, urisToDelete)
+//                val intentSenderRequest = IntentSenderRequest.Builder(pendingIntent.intentSender).build()
+//                deleteRequestLauncher.launch(intentSenderRequest)
+//            } catch (e: Exception) {
+//                Log.e("DeleteError", "Error creating delete request", e)
+//                Toast.makeText(this, "Error requesting deletion: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+//            }
+//        } else {
+//            // Fallback for older devices
+//            var deleteCount = 0
+//            for (uri in urisToDelete) {
+//                try {
+//                    contentResolver.delete(uri, null, null)
+//                    deleteCount++
+//                } catch (ex: Exception) {
+//                    Log.e("DeleteFallback", "Failed to delete $uri", ex)
+//                }
+//            }
+//            Toast.makeText(this, "$deleteCount media files deleted", Toast.LENGTH_SHORT).show()
+//            itemsToDelete.clear()
+//        }
+//    }
 
-        val urisToDelete = items.map { item ->
-            when (item.type) {
-                MediaType.VIDEO ->
-                    ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, item.id)
-                MediaType.IMAGE ->
-                    ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, item.id)
-            }
-        }
+//    private fun deletePendingItems() {
+//        deleteMediaItems(itemsToDelete)
+//    }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try {
-                val pendingIntent = MediaStore.createDeleteRequest(contentResolver, urisToDelete)
-                val intentSenderRequest = IntentSenderRequest.Builder(pendingIntent.intentSender).build()
-                deleteRequestLauncher.launch(intentSenderRequest)
-            } catch (e: Exception) {
-                Log.e("DeleteError", "Error creating delete request", e)
-                Toast.makeText(this, "Error requesting deletion: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-            }
-        } else {
-            // Fallback for older devices
-            var deleteCount = 0
-            for (uri in urisToDelete) {
-                try {
-                    contentResolver.delete(uri, null, null)
-                    deleteCount++
-                } catch (ex: Exception) {
-                    Log.e("DeleteFallback", "Failed to delete $uri", ex)
-                }
-            }
-            Toast.makeText(this, "$deleteCount media files deleted", Toast.LENGTH_SHORT).show()
-            itemsToDelete.clear()
-        }
-    }
+//    private val reviewLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+//        if (result.resultCode == Activity.RESULT_OK) {
+//            val finalList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+//                result.data?.getParcelableArrayListExtra("FINAL_DELETE_LIST", MediaItem::class.java)
+//            } else {
+//                result.data?.getParcelableArrayListExtra("FINAL_DELETE_LIST")
+//            }
+//
+//            if (finalList != null) {
+//                // Call the delete function with the list returned from ReviewActivity
+//                deleteMediaItems(finalList)
+//            }
+//        }
+//    }
 
-    private fun deletePendingItems() {
-        deleteMediaItems(itemsToDelete)
-    }
-
-    private val reviewLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val finalList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                result.data?.getParcelableArrayListExtra("FINAL_DELETE_LIST", MediaItem::class.java)
-            } else {
-                result.data?.getParcelableArrayListExtra("FINAL_DELETE_LIST")
-            }
-
-            if (finalList != null) {
-                // Call the delete function with the list returned from ReviewActivity
-                deleteMediaItems(finalList)
-            }
-        }
-    }
-
-    private fun showDeleteOptionsDialog(itemsFromDb: List<StagedItem>) {
-        val options = arrayOf("Review Media", "Delete All", "Cancel")
-
-        val trashMediaItems = itemsFromDb.mapNotNull {
-            try {
-                MediaItem(id = -1, uri = Uri.parse(it.uri), type = MediaType.IMAGE)
-            } catch (e: Exception) { null }
-        }
-
-        MaterialAlertDialogBuilder(this)
-            .setTitle("Manage ${itemsFromDb.size} items in Trash?")
-            .setItems(options) { dialog, which ->
-                when (which) {
-                    0 -> { // Review Media
-                        val intent = Intent(this, ReviewActivity::class.java)
-                        intent.putParcelableArrayListExtra("ITEMS_TO_REVIEW", ArrayList(trashMediaItems))
-                        reviewLauncher.launch(intent)
-                    }
-                    1 -> { // Delete All
-                        deleteMediaItems(trashMediaItems)
-                    }
-                    2 -> { // Cancel
-                        dialog.dismiss()
-                    }
-                }
-            }
-            .show()
-    }
+//    private fun showDeleteOptionsDialog(itemsFromDb: List<StagedItem>) {
+//        val options = arrayOf("Review Media", "Delete All", "Cancel")
+//
+//        val trashMediaItems = itemsFromDb.mapNotNull { stagedItem ->
+//            try {
+//                MediaItem(
+//                    id = stagedItem.mediaId,
+//                    uri = Uri.parse(stagedItem.uri),
+//                    type = MediaType.valueOf(stagedItem.mediaType)
+//                )
+//            } catch (e: Exception) { null }
+//        }
+//
+//        MaterialAlertDialogBuilder(this)
+//            .setTitle("Manage ${itemsFromDb.size} items in Trash?")
+//            .setItems(options) { dialog, which ->
+//                when (which) {
+//                    0 -> { // Review Media
+//                        val intent = Intent(this, ReviewActivity::class.java)
+//                        intent.putParcelableArrayListExtra("ITEMS_TO_REVIEW", ArrayList(trashMediaItems))
+//                        reviewLauncher.launch(intent)
+//                    }
+//                    1 -> { // Delete All
+//                        deleteMediaItems(trashMediaItems)
+//                    }
+//                    2 -> { // Cancel
+//                        dialog.dismiss()
+//                    }
+//                }
+//            }
+//            .show()
+//    }
 
     override fun onPause() {
         super.onPause()
         if (isFinishing && itemsToDelete.isNotEmpty()) {
             lifecycleScope.launch {
-                val itemsToStage = itemsToDelete.map {
-                    StagedItem(it.uri.toString(), "TRASH")
+                val itemsToStage = itemsToDelete.map { mediaItem ->
+                    StagedItem(
+                        uri = mediaItem.uri.toString(),
+                        mediaId = mediaItem.id,
+                        mediaType = mediaItem.type.name,
+                        status = "TRASH"
+                    )
                 }
                 for (item in itemsToStage) {
                     db.insert(item)

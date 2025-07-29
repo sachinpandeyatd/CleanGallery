@@ -33,7 +33,11 @@ class FavoritesActivity : AppCompatActivity() {
             val favoriteStagedItems = db.getItemsByStatus("FAVORITE")
             val favoriteMediaItems : List<MediaItem> = favoriteStagedItems.map {stagedItem ->
                 try {
-                    MediaItem(id = -1, uri = Uri.parse(stagedItem.uri), type = MediaType.IMAGE)
+                    MediaItem(
+                        id = stagedItem.mediaId,
+                        uri = Uri.parse(stagedItem.uri),
+                        type = MediaType.valueOf(stagedItem.mediaType)
+                    )
                 } catch (e: Exception) {
                     null
                 }

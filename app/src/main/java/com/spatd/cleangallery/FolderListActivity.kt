@@ -102,10 +102,6 @@ class FolderListActivity : AppCompatActivity() {
             topAppBarLayout.updatePadding(top = systemBars.top)
             bottomNavigationView.updatePadding(bottom = systemBars.bottom)
 
-//            view.updatePadding(top = systemBars.top)
-//
-//            folderRecyclerView.updatePadding(bottom = systemBars.bottom)
-
             insets
         }
 
@@ -125,9 +121,9 @@ class FolderListActivity : AppCompatActivity() {
                     val trashMediaItems = trashStagedItems.mapNotNull { stagedItem ->
                         try {
                             MediaItem(
-                                id = -1,
+                                id = stagedItem.mediaId,
                                 uri = Uri.parse(stagedItem.uri),
-                                type = MediaType.IMAGE
+                                type = MediaType.valueOf(stagedItem.mediaType)
                             )
                         } catch (e: Exception) {
                             Log.e("TrashButton", "Failed to parse URI: ${stagedItem.uri}", e)
