@@ -1,16 +1,20 @@
 package com.spatd.cleangallery
 
 import android.content.ContentUris
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
 import android.view.animation.LinearInterpolator
+import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -97,6 +101,8 @@ class MainActivity : AppCompatActivity(), CardStackListener {
                 }
             }
         }
+
+        checkAndShowOnboarding()
     }
 
     private fun setupCardStackView() {
@@ -249,6 +255,34 @@ class MainActivity : AppCompatActivity(), CardStackListener {
                 Log.d("MainActivity", "Session trash moved to persistent database.")
             }
         }
+    }
+
+    private fun checkAndShowOnboarding() {
+        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        val hasSeenOnboarding = prefs.getBoolean("has_seen_swipe_onboarding", false)
+
+        if (!hasSeenOnboarding) {
+            showOnboardingOverlay()
+        }
+    }
+
+    private fun showOnboardingOverlay() {
+        val rootLayout = findViewById<ConstraintLayout>(R.id.main_layout)
+
+        val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
+        val overlayView = inflater.inflate(R.layout.onboarding_overlay, rootLayout, false)
+
+        val gotItButton = overlayView.findViewById<Button>(R.id.got_it_button)
+        gotItButton.setOnClickListener {
+            rootLayout.removeView(overlayView)
+            val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            with(prefs.edit()) {
+                putBoolean("has_seen_swipe_onboarding", true)
+                apply()
+            }
+        }
+
+        rootLayout.addView(overlayView)
     }
 
     override fun onCardDragging(direction: Direction?, ratio: Float) {}
