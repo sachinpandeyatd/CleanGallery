@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.view.View
+import android.view.animation.AccelerateInterpolator
 import android.view.animation.LinearInterpolator
 import android.widget.Toast
 import androidx.activity.result.IntentSenderRequest
@@ -34,6 +35,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.yuyakaido.android.cardstackview.Duration
+import com.yuyakaido.android.cardstackview.SwipeAnimationSetting
 
 class MainActivity : AppCompatActivity(), CardStackListener {
 
@@ -43,6 +46,7 @@ class MainActivity : AppCompatActivity(), CardStackListener {
     private val itemsToDelete = mutableListOf<MediaItem>()
     private lateinit var fabDelete: FloatingActionButton
     private var currentToast: Toast? = null
+    private val db by lazy { AppDatabase.getDatabase(this).stagedItemDao() }
 
 //    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
 //        permissions ->
@@ -70,6 +74,7 @@ class MainActivity : AppCompatActivity(), CardStackListener {
         result ->
             if(result.resultCode == RESULT_OK){
                 Toast.makeText(this, "Photo deleted successfully", Toast.LENGTH_SHORT).show()
+                itemsToDelete.clear()
             }else{
                 Toast.makeText(this, "Error deleting photo", Toast.LENGTH_SHORT).show()
             }
@@ -157,9 +162,8 @@ class MainActivity : AppCompatActivity(), CardStackListener {
             setScaleInterval(0.95f)
             setSwipeThreshold(0.3f)
             setMaxDegree(20.0f)
-            setDirections(Direction.HORIZONTAL)
-            setCanScrollHorizontal(true)
-            setCanScrollVertical(false)
+//            setDirections(Direction.FREEDOM)
+            setDirections(listOf(Direction.Left, Direction.Right, Direction.Top))
             setSwipeableMethod(SwipeableMethod.AutomaticAndManual)
             setOverlayInterpolator(LinearInterpolator())
         }
@@ -256,8 +260,9 @@ class MainActivity : AppCompatActivity(), CardStackListener {
             }
 
             Direction.Top -> {
-                Log.d("CardStackView", "Swiped Up. Favouriting: ${swipedItem.uri}")
-                currentToast = Toast.makeText(this, "Favorited!", Toast.LENGTH_SHORT)
+                val itemToStage = StagedItem(swipedItem.uri.toString(), "FAVORITE")
+                lifecycleScope.launch { db.insert(itemToStage) }
+                currentToast = Toast.makeText(this, "Added to Favorites", Toast.LENGTH_SHORT)
             }
 
             else -> {
@@ -273,7 +278,7 @@ class MainActivity : AppCompatActivity(), CardStackListener {
 
     private fun deleteMediaItems(items: List<MediaItem>) {
         if (items.isEmpty()) {
-            Toast.makeText(this, "No photos selected for deletion.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "No items to delete.", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -291,13 +296,12 @@ class MainActivity : AppCompatActivity(), CardStackListener {
                 val pendingIntent = MediaStore.createDeleteRequest(contentResolver, urisToDelete)
                 val intentSenderRequest = IntentSenderRequest.Builder(pendingIntent.intentSender).build()
                 deleteRequestLauncher.launch(intentSenderRequest)
-                // After launching, clear the list
-                itemsToDelete.clear()
             } catch (e: Exception) {
+                Log.e("DeleteError", "Error creating delete request", e)
                 Toast.makeText(this, "Error requesting deletion: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             }
         } else {
-            // Fallback for older devices (will delete one by one)
+            // Fallback for older devices
             var deleteCount = 0
             for (uri in urisToDelete) {
                 try {
@@ -307,7 +311,7 @@ class MainActivity : AppCompatActivity(), CardStackListener {
                     Log.e("DeleteFallback", "Failed to delete $uri", ex)
                 }
             }
-            Toast.makeText(this, "$deleteCount photos deleted", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "$deleteCount media files deleted", Toast.LENGTH_SHORT).show()
             itemsToDelete.clear()
         }
     }

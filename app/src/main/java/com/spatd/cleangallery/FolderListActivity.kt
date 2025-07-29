@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
+import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -61,7 +62,6 @@ class FolderListActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_folder_list)
 
-
         val mainContent = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(R.id.main_content)
         val topAppBarLayout = findViewById<AppBarLayout>(R.id.top_app_bar_layout)
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -98,6 +98,13 @@ class FolderListActivity : AppCompatActivity() {
 //            folderRecyclerView.updatePadding(bottom = systemBars.bottom)
 
             insets
+        }
+
+        val favoritesButton = findViewById<Button>(R.id.favorites_button)
+
+        favoritesButton.setOnClickListener {
+            val intent = Intent(this, FavoritesActivity::class.java)
+            startActivity(intent)
         }
 
         checkPermissionsAndFetchFolders()
