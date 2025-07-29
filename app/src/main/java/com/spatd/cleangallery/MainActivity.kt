@@ -1,7 +1,9 @@
 package com.spatd.cleangallery
 
 import android.Manifest
+import android.app.Activity
 import android.content.ContentUris
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -21,6 +23,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DefaultItemAnimator
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.yuyakaido.android.cardstackview.CardStackLayoutManager
 import com.yuyakaido.android.cardstackview.CardStackListener
 import com.yuyakaido.android.cardstackview.CardStackView
@@ -107,7 +110,11 @@ class MainActivity : AppCompatActivity(), CardStackListener {
         }
 
         fabDelete.setOnClickListener {
-            deletePendingItems()
+            if (itemsToDelete.isNotEmpty()) {
+                showDeleteOptionsDialog()
+            } else {
+                Toast.makeText(this, "No items selected for deletion", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -294,6 +301,43 @@ class MainActivity : AppCompatActivity(), CardStackListener {
 
     private fun deletePendingItems() {
         deleteMediaItems(itemsToDelete)
+    }
+
+    private val reviewLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val finalList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                result.data?.getParcelableArrayListExtra("FINAL_DELETE_LIST", MediaItem::class.java)
+            } else {
+                result.data?.getParcelableArrayListExtra("FINAL_DELETE_LIST")
+            }
+
+            if (finalList != null) {
+                // Call the delete function with the list returned from ReviewActivity
+                deleteMediaItems(finalList)
+            }
+        }
+    }
+
+    private fun showDeleteOptionsDialog() {
+        val options = arrayOf("Review Media", "Delete All", "Cancel")
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Delete ${itemsToDelete.size} items?")
+            .setItems(options) { dialog, which ->
+                when (which) {
+                    0 -> { // Review Media
+                        val intent = Intent(this, ReviewActivity::class.java)
+                        intent.putParcelableArrayListExtra("ITEMS_TO_REVIEW", ArrayList(itemsToDelete))
+                        reviewLauncher.launch(intent)
+                    }
+                    1 -> { // Delete All
+                        deleteMediaItems(itemsToDelete)
+                    }
+                    2 -> { // Cancel
+                        dialog.dismiss()
+                    }
+                }
+            }
+            .show()
     }
 
     override fun onCardDragging(direction: Direction?, ratio: Float) {}

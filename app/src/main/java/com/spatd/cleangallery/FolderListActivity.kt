@@ -31,6 +31,7 @@ import kotlinx.coroutines.withContext
 class FolderListActivity : AppCompatActivity() {
 
     private lateinit var folderRecyclerView: RecyclerView
+    private lateinit var bottomNavigationView: BottomNavigationView
 
     @SuppressLint("NewApi")
     private val requestPermissionLauncher =
@@ -59,18 +60,18 @@ class FolderListActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_folder_list)
 
-        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
-        setSupportActionBar(toolbar)
 
         val mainContent = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(R.id.main_content)
         val topAppBarLayout = findViewById<AppBarLayout>(R.id.top_app_bar_layout)
-        val bottomNavigationView = findViewById<BottomNavigationView>(R.id.bottom_navigation)
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        bottomNavigationView = findViewById(R.id.bottom_navigation)
         folderRecyclerView = findViewById(R.id.folder_recycler_view)
+
+        setSupportActionBar(toolbar)
         folderRecyclerView.layoutManager = LinearLayoutManager(this)
 
 //        val bottomNavigationView = findViewById<com.google.android.material.bottomnavigation.BottomNavigationView>(R.id.bottom_navigation)
         bottomNavigationView.selectedItemId = R.id.nav_folders
-
         bottomNavigationView.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_photos -> {
@@ -84,15 +85,15 @@ class FolderListActivity : AppCompatActivity() {
             }
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(mainContent) { view, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(mainContent) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
 
             topAppBarLayout.updatePadding(top = systemBars.top)
             bottomNavigationView.updatePadding(bottom = systemBars.bottom)
 
-            view.updatePadding(top = systemBars.top)
-
-            folderRecyclerView.updatePadding(bottom = systemBars.bottom)
+//            view.updatePadding(top = systemBars.top)
+//
+//            folderRecyclerView.updatePadding(bottom = systemBars.bottom)
 
             insets
         }
